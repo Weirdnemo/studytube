@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>YouTube Distraction-Free Player</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div id="controls">
+        <input type="text" id="videoUrl" placeholder="Paste YouTube URL here">
+        <button class="primary" onclick="loadVideo()">Play</button>
+        <button class="secondary" onclick="copyUrl()">Copy URL</button>
+        <button class="secondary" onclick="toggleFullscreen()">&#x26F6;</button>
+        <button class="secondary" onclick="changeSpeed()">1x</button>
+        <button class="secondary mute" onclick="toggleMute()">&#128263;</button>
+        <button class="secondary notes" onclick="openNotes()">&#9998;</button>
+    </div>
+  
+  <div id="player"></div>
+
+  <script>
+    let player;
+    let isPlaying = false;
+
+    // Load YouTube API dynamically
+    (function loadYouTubeAPI() {
+      const script = document.createElement('script');
+      script.src = "https://www.youtube.com/iframe_api";
+      document.body.appendChild(script);
+    })();
+
+    // Initialize the YouTube player when the API is ready
+    function onYouTubeIframeAPIReady() {
+      player = new YT.Player('player', {
+        height: '100%',
+        width: '100%',
+        videoId: '', // Initially empty
+        playerVars: {
+          autoplay: 0,
+          controls: 0,
+          modestbranding: 1,
+          rel: 0,
+          iv_load_policy: 3,
+          fs: 0,
+        },
+        events: {
+          onStateChange: onPlayerStateChange,
+          onError: onPlayerError
+        }
+      });
+    }
+
+    function loadVideo() {
+      const url = document.getElementById('videoUrl').value;
+
+      // Check if the URL is a playlist
+      if (url.includes('list=')) {
+        const playlistId = extractPlaylistId(url);
+        loadPlaylist(playlistId);
+      } else {
+        const videoId = extractVideoId(url);
+        player.loadVideoById(videoId);
+      }
+
+      document.getElementById('controls').classList.add('hidden'); // Optionally hide controls
+    }
+
+    function extractVideoId(url) {
+      const match = url.match(/(?:v=|\/)([0-9A-Za-z_-]{11})/);
+      return match ? match[1] : null;
+    }
+
+    function extractPlaylistId(url) {
+      const match = url.match(/(?:list=)([0-9A-Za-z_-]+)/);
+      return match ? match[1] : null;
+    }
+
+    function loadPlaylist(playlistId) {
+      if (playlistId) {
+        player.loadPlaylist({
+          listType: 'playlist',
+          list: playlistId,
+          index: 0,
+          suggestedQuality: 'highres'
+        });
+      } else {
+        alert("Invalid playlist URL");
+      }
+    }
+
+    function toggleFullscreen() {
+      const iframe = document.getElementById('player');
+      if (iframe.requestFullscreen) {
+        iframe.requestFullscreen();
+      } else if (iframe.mozRequestFullScreen) {
+        iframe.mozRequestFullScreen();
+      } else if (iframe.webkitRequestFullscreen) {
+        iframe.webkitRequestFullscreen();
+      } else if (iframe.msRequestFullscreen) {
+        iframe.msRequestFullscreen();
+      }
+    }
+
+    function changeSpeed() {
+  const currentSpeed = player.getPlaybackRate();
+  let newSpeed;
+
+  // Cycle through 1x → 1.5x → 2x → back to 1x
+  if (currentSpeed === 1) {
+    newSpeed = 1.5;
+  } else if (currentSpeed === 1.5) {
+    newSpeed = 2;
+  } else {
+    newSpeed = 1;
+  }
+
+  player.setPlaybackRate(newSpeed);
+  document.querySelector('button[onclick="changeSpeed()"]').textContent = `${newSpeed}x`;
+}
+   
+
+    function toggleMute() {
+  const muteButton = document.querySelector('button.mute');
+  if (player.isMuted()) {
+    player.unMute();
+    muteButton.style.backgroundColor = "hsl(122, 39%, 49%)"; // Green when unmuted
+    muteButton.textContent = "🔊"; // Update icon for unmuted
+  } else {
+    player.mute();
+    muteButton.style.backgroundColor = "hsl(0, 75%, 50%)"; // Red when muted
+    muteButton.textContent = "🔇"; // Update icon for muted
+  }
+}
+
+
+    function copyUrl() {
+      const url = document.getElementById('videoUrl').value;
+      navigator.clipboard.writeText(url).then(() => {
+        alert("Didn't you copied the URL from youtube? anyways here you go...");
+      });
+    }
+
+    function openNotes() {
+      alert("Work in progress...");
+    }
+
+    function onPlayerStateChange(event) {
+      if (event.data === YT.PlayerState.PLAYING) {
+        isPlaying = true;
+      } else {
+        isPlaying = false;
+      }
+    }
+
+    function onPlayerError(error) {
+      alert("An error occurred: " + error.data);
+    }
+  </script>
+</body>
+</html>
